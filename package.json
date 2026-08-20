@@ -1,0 +1,22 @@
+{
+  "name": "browser-ai-reviewer",
+  "version": "1.0.0",
+  "description": "One-click AI code review embedded in the GitHub PR page: a button launches agents (Claude Code, Codex) in per-PR git worktrees and streams their terminals into a tabbed panel on the page.",
+  "license": "MIT",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "bin": {
+    "browser-ai-reviewer": "src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "config": "node src/server.js --print-config",
+    "postinstall": "node scripts/fix-pty-permissions.js"
+  },
+  "dependencies": {
+    "node-pty": "^1.0.0"
+  }
+}
