@@ -131,16 +131,24 @@ Closing the panel with ✕ stops the agents immediately.
 ## Security
 
 The service binds `127.0.0.1` only, but that alone isn't enough: any page in your
-browser can still *send* a cross-origin request to localhost, and `POST /session`
-starts a process. So every route except `/health` requires the token, compared in
-constant time.
+browser can still *send* a cross-origin request to localhost, and `POST /session` starts
+a process. Four layers, then:
 
-The token never leaves your machine. Responses deliberately carry **no CORS headers** —
-`GM_xmlhttpRequest` doesn't need them, and without them an ordinary page can't read our
-responses even if it somehow learned the token. The userscript route is authenticated
-too, so the token can't be harvested by fetching the script.
-
-Config is written `0600`.
+- **Token on every route** except `/health`, compared in constant time. It's generated
+  at install, never leaves your machine, and is stored in a `0600` config.
+- **No CORS headers, anywhere.** `GM_xmlhttpRequest` is privileged and doesn't need
+  them; without them an ordinary page can't read our responses even if it learned the
+  token. The userscript route is authenticated too, so the token can't be harvested by
+  fetching the script.
+- **Loopback `Host` header required.** Binding `127.0.0.1` stops traffic from off the
+  machine, but not a browser tricked into resolving an attacker's hostname to
+  `127.0.0.1` (DNS rebinding) — under that hostname the page's own origin matches and
+  same-origin policy would let it read responses. Requests not addressed to a loopback
+  name get a 403.
+- **Charset validation** on `owner`, `repo` and `pr` before they reach a path or a git
+  ref (`src/validate.js`). These are post-authentication, but `repo` is joined onto a
+  base directory and `pr` onto a worktree path, so a value like `../../../../tmp` would
+  otherwise walk out of your configured `repoBases`.
 
 Worth being clear about the trust model: this runs AI agents with your credentials
 against branches from a PR, in a worktree inside your clone. Point it at repos whose

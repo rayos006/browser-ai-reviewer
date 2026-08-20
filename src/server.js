@@ -23,6 +23,7 @@ const crypto = require('crypto');
 const config = require('./config');
 const { Sessions } = require('./sessions');
 const { inUse } = require('./port');
+const { prTarget, hostAllowed } = require('./validate');
 
 const pkg = require('../package.json');
 const USERSCRIPT_PATH = path.join(__dirname, '..', 'userscript', 'browser-ai-reviewer.user.js');
@@ -90,6 +91,12 @@ function tokenOk(supplied) {
 // --- routes -----------------------------------------------------------------
 
 const server = http.createServer(async (req, res) => {
+  // Reject anything not addressed to us by a loopback name. Binding 127.0.0.1 stops
+  // traffic off the machine, but not a browser that has been tricked into resolving
+  // some other hostname to 127.0.0.1 — and under that hostname the page's own origin
+  // matches, so it could read our responses.
+  if (!hostAllowed(req.headers.host)) return send(res, 403, 'forbidden');
+
   const u = new URL(req.url, `http://${cfg.host}`);
   const route = u.pathname;
 
@@ -113,10 +120,12 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && route === '/session') {
-    const { owner, repo, pr, url, agent } = await readJson(req);
-    if (!repo || !pr) return send(res, 400, 'missing repo/pr');
+    const body = await readJson(req);
     try {
-      return json(res, 200, { sessionId: sessions.create({ owner, repo, pr, url, agent }) });
+      // Charset-check owner/repo/pr before they reach a path or a git ref.
+      const target = prTarget(body);
+      const sessionId = sessions.create({ ...target, url: body.url, agent: body.agent });
+      return json(res, 200, { sessionId });
     } catch (e) {
       return send(res, e.status || 500, e.message);
     }
