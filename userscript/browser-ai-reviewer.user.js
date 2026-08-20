@@ -32,8 +32,12 @@
   const COLS = __COLS__, ROWS = __ROWS__; // must match the PTY size the service allocates
   const AGENTS = __AGENTS__;              // [{id,label}], generated from the service config
 
-  const BTN_ID = 'ai-review-btn';
-  const PANEL_ID = 'ai-review-panel';
+  // Namespaced deliberately. The Hammerspoon-era script this replaces used the bare
+  // 'ai-review-btn' / 'ai-review-panel', and since both guard on "does this id already
+  // exist?", having both installed meant whichever loaded first won and the other
+  // silently did nothing — one button on the page, no way to tell which script owned it.
+  const BTN_ID = 'bar-ai-review-btn';
+  const PANEL_ID = 'bar-ai-review-panel';
 
   GM_addStyle(GM_getResourceText('XTERM_CSS'));
 

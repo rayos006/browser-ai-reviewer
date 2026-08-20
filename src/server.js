@@ -40,11 +40,15 @@ function installUrl() {
 
 // The agent list, terminal size and token are injected here rather than duplicated in
 // a checked-in script, so the page's tabs always match the agents this service can
-// actually run. @version carries the config's mtime so editing the config makes
-// Tampermonkey pull a fresh copy on its next update check.
+// actually run.
+//
+// @version is derived from the newest mtime of the two inputs that change what the
+// page does: the config and the template. Both matter -- keying it to the config alone
+// means a template fix ships to nobody, because Tampermonkey only re-installs on a
+// version increase.
 function renderUserscript() {
-  let mtimeMin = 0;
-  try { mtimeMin = Math.floor(fs.statSync(cfg.configPath).mtimeMs / 60_000); } catch {}
+  const mtimeOf = (p) => { try { return fs.statSync(p).mtimeMs; } catch { return 0; } };
+  const mtimeMin = Math.floor(Math.max(mtimeOf(cfg.configPath), mtimeOf(USERSCRIPT_PATH)) / 60_000);
 
   const agents = cfg.agents.map((a) => ({ id: a.id, label: a.label }));
   return fs.readFileSync(USERSCRIPT_PATH, 'utf8')
